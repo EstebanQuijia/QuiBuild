@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./src/routes/authRoutes');
 
 const app = express();
@@ -8,21 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rutas
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Rutas de la API
 app.use('/api', authRoutes);
 
-// Ruta de prueba
+// Ruta raíz - redirige al login
 app.get('/', (req, res) => {
-  res.json({ 
-    mensaje: 'API del Sistema de Gestión de Inventario - QuiBuild',
-    version: '1.0.0',
-    estado: 'activo'
-  });
-});
-
-// Manejo de rutas no encontradas
-app.use((req, res) => {
-  res.status(404).json({ mensaje: 'Ruta no encontrada' });
+  res.sendFile(path.join(__dirname, '../frontend/login.html'));
 });
 
 // Iniciar servidor
@@ -30,7 +25,6 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Base de datos: SQLite`);
-  console.log(`🔐 Rutas disponibles:`);
-  console.log(`   POST /api/login`);
-  console.log(`   GET /api/verificar`);
+  console.log(`🌐 Frontend disponible en: http://localhost:${PORT}`);
+  console.log(`🔐 API disponible en: http://localhost:${PORT}/api`);
 });

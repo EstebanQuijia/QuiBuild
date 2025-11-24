@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Base de datos local
+*.db
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Variables de entorno
+.env
+
+# Carpetas de IDEs
+.vscode/
+.idea/

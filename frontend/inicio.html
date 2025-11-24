@@ -3,53 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inicio - Sistema de Inventario</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #333;
-    }
-    button {
-      padding: 10px 20px;
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
+  <title>Inicio - QuiBuild</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <div class="container">
-    <h1>Bienvenido al Sistema de Inventario</h1>
-    <p>Has iniciado sesión correctamente</p>
-    <button onclick="cerrarSesion()">Cerrar Sesión</button>
+<body class="dashboard">
+  <nav class="navbar">
+    <h1>QuiBuild</h1>
+    <button class="btn btn-secondary" onclick="cerrarSesion()">Cerrar Sesión</button>
+  </nav>
+
+  <div class="content">
+    <div class="welcome-card">
+      <h2>¡Bienvenido al Sistema de Gestión!</h2>
+      <p id="nombreUsuario"></p>
+      <p>Has iniciado sesión correctamente en el sistema de inventario y alquiler de equipos de topografía.</p>
+    </div>
   </div>
 
-  <script>
-    // Verificar si hay token
-    if (!localStorage.getItem('token')) {
-      window.location.href = 'login.html';
-    }
-
-    function cerrarSesion() {
-      localStorage.removeItem('token');
-      window.location.href = 'login.html';
-    }
-  </script>
+  <script src="js/inicio.js"></script>
 </body>
 </html>
-

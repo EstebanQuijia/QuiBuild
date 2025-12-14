@@ -62,8 +62,7 @@ async function cargarInventario() {
 
 // Ver unidades específicas
 function verUnidades(tipoId) {
-  // Por ahora solo un alert, luego crearemos esta funcionalidad
-  alert(`Ver unidades del tipo ${tipoId}`);
+  window.location.href = `detalle-equipo.html?id=${tipoId}`;
 }
 
 // Cargar al iniciar

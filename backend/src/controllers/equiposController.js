@@ -73,3 +73,30 @@ exports.crearEquipo = (req, res) => {
     });
   });
 };
+
+// Obtener un tipo específico
+exports.obtenerTipoPorId = (req, res) => {
+  const { id } = req.params;
+  
+  db.get('SELECT * FROM tipos_equipos WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al obtener tipo' });
+    }
+    if (!row) {
+      return res.status(404).json({ mensaje: 'Tipo no encontrado' });
+    }
+    res.json(row);
+  });
+};
+
+// Obtener equipos de un tipo específico
+exports.obtenerEquiposPorTipo = (req, res) => {
+  const { tipoId } = req.params;
+  
+  db.all('SELECT * FROM equipos WHERE tipo_equipo_id = ? ORDER BY numero_serie', [tipoId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al obtener equipos' });
+    }
+    res.json(rows);
+  });
+};

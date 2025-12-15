@@ -9,4 +9,13 @@ router.post('/equipos', equiposController.crearEquipo);
 router.get('/tipos-equipos/:id', equiposController.obtenerTipoPorId);
 router.get('/equipos/tipo/:tipoId', equiposController.obtenerEquiposPorTipo);
 
+
+// Rutas de administración
+router.get('/tipos-equipos/todos', equiposController.obtenerTodosTipos);
+router.delete('/tipos-equipos/:id', equiposController.eliminarTipo);
+router.patch('/tipos-equipos/:id/restaurar', equiposController.restaurarTipo);
+
+router.get('/equipos/todos', equiposController.obtenerTodosEquipos);
+router.delete('/equipos/:id', equiposController.eliminarEquipo);
+router.patch('/equipos/:id/restaurar', equiposController.restaurarEquipo);
 module.exports = router;

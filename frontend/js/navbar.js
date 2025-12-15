@@ -27,6 +27,9 @@ function cargarNavbar() {
               <a class="nav-link" href="gestion-equipos.html" id="nav-gestion">Gestionar Equipos</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="administracion.html" id="nav-admin">Administración</a>
+            </li>
+            <li class="nav-item">
               <button class="btn btn-danger ms-3" onclick="cerrarSesion()">Cerrar Sesión</button>
             </li>
           </ul>
@@ -44,8 +47,10 @@ function cargarNavbar() {
     document.getElementById('nav-inicio').classList.add('active');
   } else if (pagina.includes('inventario')) {
     document.getElementById('nav-inventario').classList.add('active');
-  } else if (pagina.includes('clientes')) { 
+  } else if (pagina.includes('clientes')) {
     document.getElementById('nav-clientes').classList.add('active');
+  } else if (pagina.includes('administracion')) {
+  document.getElementById('nav-admin').classList.add('active');
   } else if (pagina.includes('gestion')) {
     document.getElementById('nav-gestion').classList.add('active');
   }

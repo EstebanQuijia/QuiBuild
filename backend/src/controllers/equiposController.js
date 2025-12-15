@@ -100,3 +100,87 @@ exports.obtenerEquiposPorTipo = (req, res) => {
     res.json(rows);
   });
 };
+
+// Obtener todos los tipos (incluyendo inactivos)
+exports.obtenerTodosTipos = (req, res) => {
+  db.all('SELECT * FROM tipos_equipos ORDER BY activo DESC, nombre', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al obtener tipos' });
+    }
+    res.json(rows);
+  });
+};
+
+// Borrado lógico de tipo
+exports.eliminarTipo = (req, res) => {
+  const { id } = req.params;
+  
+  db.run('UPDATE tipos_equipos SET activo = 0 WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al desactivar tipo' });
+    }
+    res.json({ mensaje: 'Tipo desactivado correctamente' });
+  });
+};
+
+// Restaurar tipo
+exports.restaurarTipo = (req, res) => {
+  const { id } = req.params;
+  
+  db.run('UPDATE tipos_equipos SET activo = 1 WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al restaurar tipo' });
+    }
+    res.json({ mensaje: 'Tipo restaurado correctamente' });
+  });
+};
+
+// Obtener todos los equipos (incluyendo inactivos)
+exports.obtenerTodosEquipos = (req, res) => {
+  const { tipo } = req.query;
+  
+  let query = `
+    SELECT e.*, te.nombre as tipo_nombre 
+    FROM equipos e 
+    LEFT JOIN tipos_equipos te ON e.tipo_equipo_id = te.id
+  `;
+  let params = [];
+  
+  if (tipo) {
+    query += ' WHERE e.tipo_equipo_id = ?';
+    params.push(tipo);
+  }
+  
+  query += ' ORDER BY e.activo DESC, e.numero_serie';
+  
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al obtener equipos' });
+    }
+    res.json(rows);
+  });
+};
+
+// Borrado lógico de equipo
+exports.eliminarEquipo = (req, res) => {
+  const { id } = req.params;
+  
+  db.run('UPDATE equipos SET activo = 0 WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al desactivar equipo' });
+    }
+    res.json({ mensaje: 'Equipo desactivado correctamente' });
+  });
+};
+
+// Restaurar equipo
+exports.restaurarEquipo = (req, res) => {
+  const { id } = req.params;
+  
+  db.run('UPDATE equipos SET activo = 1 WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al restaurar equipo' });
+    }
+    res.json({ mensaje: 'Equipo restaurado correctamente' });
+  });
+};

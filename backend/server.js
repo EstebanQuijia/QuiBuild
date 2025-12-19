@@ -17,8 +17,8 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Rutas de la API
 app.use('/api', authRoutes);
-app.use('/api', inventarioRoutes);
 app.use('/api', equiposRoutes);
+app.use('/api', inventarioRoutes);
 app.use('/api', clientesRoutes);
 
 

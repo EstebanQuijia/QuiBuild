@@ -8,12 +8,12 @@ db.serialize(() => {
   db.run("ALTER TABLE tipos_equipos ADD COLUMN activo INTEGER DEFAULT 1", (err) => {
     if (err) {
       if (err.message.includes('duplicate column')) {
-        console.log('✅ Campo "activo" ya existe en tipos_equipos');
+        console.log('Campo "activo" ya existe en tipos_equipos');
       } else {
-        console.error('❌ Error en tipos_equipos:', err);
+        console.error('Error en tipos_equipos:', err);
       }
     } else {
-      console.log('✅ Campo "activo" agregado a tipos_equipos');
+      console.log('Campo "activo" agregado a tipos_equipos');
     }
   });
 
@@ -21,12 +21,12 @@ db.serialize(() => {
   db.run("ALTER TABLE equipos ADD COLUMN activo INTEGER DEFAULT 1", (err) => {
     if (err) {
       if (err.message.includes('duplicate column')) {
-        console.log('✅ Campo "activo" ya existe en equipos');
+        console.log('Campo "activo" ya existe en equipos');
       } else {
-        console.error('❌ Error en equipos:', err);
+        console.error('Error en equipos:', err);
       }
     } else {
-      console.log('✅ Campo "activo" agregado a equipos');
+      console.log('Campo "activo" agregado a equipos');
     }
   });
 
@@ -34,18 +34,18 @@ db.serialize(() => {
   db.run("ALTER TABLE clientes ADD COLUMN activo INTEGER DEFAULT 1", (err) => {
     if (err) {
       if (err.message.includes('duplicate column')) {
-        console.log('✅ Campo "activo" ya existe en clientes');
+        console.log('Campo "activo" ya existe en clientes');
       } else {
-        console.error('❌ Error en clientes:', err);
+        console.error('Error en clientes:', err);
       }
     } else {
-      console.log('✅ Campo "activo" agregado a clientes');
+      console.log('Campo "activo" agregado a clientes');
     }
   });
 });
 
 setTimeout(() => {
   db.close(() => {
-    console.log('\n🎉 Actualización completada');
+    console.log('\nActualización completada');
   });
 }, 1000);

@@ -7,7 +7,7 @@ if (!localStorage.getItem('token')) {
 
 async function cargarTipos() {
   try {
-    const res = await fetch('/api/tipos-equipos/todos'); // Nueva ruta que incluye inactivos
+    const res = await fetch('/api/tipos-equipos/todos'); 
     const tipos = await res.json();
 
     const tbody = document.getElementById('listaTipos');
@@ -43,7 +43,6 @@ async function cargarTipos() {
       tbody.appendChild(row);
     });
 
-    // Actualizar filtro de unidades
     actualizarFiltroTipos(tipos.filter(t => t.activo === 1 || t.activo === null));
 
   } catch (error) {
@@ -53,6 +52,7 @@ async function cargarTipos() {
 
 function actualizarFiltroTipos(tipos) {
   const select = document.getElementById('filtroTipo');
+  if (!select) return;
   select.innerHTML = '<option value="">Todos los tipos</option>';
   
   tipos.forEach(tipo => {
@@ -63,8 +63,9 @@ function actualizarFiltroTipos(tipos) {
   });
 }
 
+// CORRECCIÓN 1: Mensaje de advertencia actualizado
 async function eliminarTipo(id, nombre) {
-  if (!confirm(`¿Desactivar el tipo "${nombre}"?\n\nEsto ocultará el tipo del inventario pero no eliminará las unidades asociadas.`)) {
+  if (!confirm(`¿Desactivar el tipo "${nombre}"?\n\nEsto ocultará el tipo del inventario y TAMBIÉN desactivará todas las unidades asociadas.`)) {
     return;
   }
 
@@ -78,6 +79,7 @@ async function eliminarTipo(id, nombre) {
     if (res.ok) {
       alert(data.mensaje);
       cargarTipos();
+      cargarUnidades(); // CORRECCIÓN 2: Refrescar unidades también
     } else {
       alert(data.mensaje || 'Error al desactivar');
     }
@@ -98,6 +100,7 @@ async function restaurarTipo(id) {
     if (res.ok) {
       alert(data.mensaje);
       cargarTipos();
+      cargarUnidades(); // Refrescar unidades para verlas activas
     } else {
       alert(data.mensaje || 'Error al restaurar');
     }
@@ -109,10 +112,11 @@ async function restaurarTipo(id) {
 // ==================== UNIDADES INDIVIDUALES ====================
 
 async function cargarUnidades() {
-  const tipoId = document.getElementById('filtroTipo').value;
+  const filtro = document.getElementById('filtroTipo');
+  const tipoId = filtro ? filtro.value : '';
   
   try {
-    let url = '/api/equipos/todos'; // Nueva ruta que incluye inactivos
+    let url = '/api/equipos/todos';
     if (tipoId) {
       url += `?tipo=${tipoId}`;
     }
@@ -121,6 +125,7 @@ async function cargarUnidades() {
     const unidades = await res.json();
 
     const tbody = document.getElementById('listaUnidades');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (unidades.length === 0) {
@@ -183,6 +188,7 @@ async function eliminarUnidad(id, numeroSerie) {
   }
 }
 
+// CORRECCIÓN 3: Refrescar ambas tablas al restaurar unidad
 async function restaurarUnidad(id) {
   try {
     const res = await fetch(`/api/equipos/${id}/restaurar`, {
@@ -193,6 +199,8 @@ async function restaurarUnidad(id) {
 
     if (res.ok) {
       alert(data.mensaje);
+      // Al restaurar un hijo, el servidor activa al padre. Refrescamos ambas.
+      cargarTipos();
       cargarUnidades();
     } else {
       alert(data.mensaje || 'Error al restaurar');

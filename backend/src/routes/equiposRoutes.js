@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const equiposController = require('../controllers/equiposController');
 
-
+console.log("Funciones cargadas:", equiposController);
 // Rutas de administración
 router.get('/tipos-equipos/todos', equiposController.obtenerTodosTipos);
 router.delete('/tipos-equipos/:id', equiposController.eliminarTipo);

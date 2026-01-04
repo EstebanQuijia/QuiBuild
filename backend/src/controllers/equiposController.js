@@ -84,19 +84,13 @@ exports.obtenerTodosEquipos = (req, res) => {
 
 // --- MÉTODOS DE BORRADO LÓGICO Y RESTAURACIÓN ---
 
-// 1. Eliminar Tipo (En cascada real)
 exports.eliminarTipo = (req, res) => {
   const { id } = req.params;
-
   db.get('SELECT COUNT(*) as alquilados FROM equipos WHERE tipo_equipo_id = ? AND estado = "alquilado"', [id], (err, row) => {
     if (err) return res.status(500).json({ mensaje: 'Error al verificar alquileres' });
-
     if (row.alquilados > 0) {
-      return res.status(400).json({ 
-        mensaje: `No se puede desactivar: hay ${row.alquilados} unidad(es) alquilada(s).` 
-      });
+      return res.status(400).json({ mensaje: `No se puede desactivar: hay ${row.alquilados} unidad(es) alquilada(s).` });
     }
-
     db.serialize(() => {
       db.run('UPDATE tipos_equipos SET activo = 0 WHERE id = ?', [id]);
       db.run('UPDATE equipos SET activo = 0 WHERE tipo_equipo_id = ?', [id], (err) => {
@@ -107,4 +101,52 @@ exports.eliminarTipo = (req, res) => {
   });
 };
 
-// 2.
+exports.restaurarTipo = (req, res) => {
+  const { id } = req.params;
+  db.serialize(() => {
+    db.run('UPDATE tipos_equipos SET activo = 1 WHERE id = ?', [id]);
+    db.run('UPDATE equipos SET activo = 1 WHERE tipo_equipo_id = ?', [id], (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al restaurar unidades' });
+      res.json({ mensaje: 'Tipo y todas sus unidades restaurados correctamente' });
+    });
+  });
+};
+
+exports.eliminarEquipo = (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT estado FROM equipos WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al verificar equipo' });
+    if (row && row.estado === 'alquilado') {
+      return res.status(400).json({ mensaje: 'No se puede desactivar un equipo que está alquilado.' });
+    }
+    db.run('UPDATE equipos SET activo = 0 WHERE id = ?', [id], function(err) {
+      if (err) return res.status(500).json({ mensaje: 'Error al desactivar equipo' });
+      res.json({ mensaje: 'Equipo desactivado correctamente' });
+    });
+  });
+};
+
+// RESTAURAR EQUIPO: Con lógica para activar automáticamente al padre (Tipo)
+exports.restaurarEquipo = (req, res) => {
+  const { id } = req.params;
+  
+  db.serialize(() => {
+    // 1. Primero activamos la unidad individual
+    db.run('UPDATE equipos SET activo = 1 WHERE id = ?', [id], function(err) {
+      if (err) return res.status(500).json({ mensaje: 'Error al restaurar equipo' });
+      
+      // 2. Automáticamente activamos el tipo de equipo (el padre) al que pertenece
+      db.run(`
+        UPDATE tipos_equipos 
+        SET activo = 1 
+        WHERE id = (SELECT tipo_equipo_id FROM equipos WHERE id = ?)
+      `, [id], (err) => {
+        if (err) {
+          console.error("Error al activar grupo padre automáticamente:", err);
+          return res.status(500).json({ mensaje: 'Equipo restaurado, pero no se pudo activar el grupo padre.' });
+        }
+        res.json({ mensaje: 'Equipo restaurado y grupo activado correctamente' });
+      });
+    });
+  });
+};

@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
 
 exports.upload = multer({ storage: storage });
 
-// --- MÉTODOS DE CREACIÓN Y OBTENCIÓN (Sin cambios) ---
+// --- MÉTODOS DE CREACIÓN Y OBTENCIÓN ---
 
 exports.crearTipoEquipo = (req, res) => {
   const { nombre, tipo, marca, modelo, descripcion } = req.body;
@@ -82,13 +82,12 @@ exports.obtenerTodosEquipos = (req, res) => {
   });
 };
 
-// --- MÉTODOS DE BORRADO LÓGICO Y RESTAURACIÓN (CAMBIOS AQUÍ) ---
+// --- MÉTODOS DE BORRADO LÓGICO Y RESTAURACIÓN ---
 
-// 1. Eliminar Tipo (En cascada con protección de alquiler)
+// 1. Eliminar Tipo (En cascada real)
 exports.eliminarTipo = (req, res) => {
   const { id } = req.params;
 
-  // Verificamos si alguna unidad de este tipo está alquilada
   db.get('SELECT COUNT(*) as alquilados FROM equipos WHERE tipo_equipo_id = ? AND estado = "alquilado"', [id], (err, row) => {
     if (err) return res.status(500).json({ mensaje: 'Error al verificar alquileres' });
 
@@ -98,47 +97,14 @@ exports.eliminarTipo = (req, res) => {
       });
     }
 
-    // Si no hay alquilados, desactivamos el tipo y sus unidades
     db.serialize(() => {
       db.run('UPDATE tipos_equipos SET activo = 0 WHERE id = ?', [id]);
-      db.run('UPDATE equipos SET activo = 0 WHERE tipo_equipo_id = ?', [id]);
-      res.json({ mensaje: 'Tipo y sus unidades desactivados correctamente' });
+      db.run('UPDATE equipos SET activo = 0 WHERE tipo_equipo_id = ?', [id], (err) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al desactivar unidades' });
+        res.json({ mensaje: 'Tipo y sus unidades desactivados correctamente' });
+      });
     });
   });
 };
 
-// 2. Restaurar Tipo (Solo activa el tipo, las unidades se quedan como estaban)
-exports.restaurarTipo = (req, res) => {
-  const { id } = req.params;
-  db.run('UPDATE tipos_equipos SET activo = 1 WHERE id = ?', [id], function(err) {
-    if (err) return res.status(500).json({ mensaje: 'Error al restaurar tipo' });
-    res.json({ mensaje: 'Tipo restaurado. Active las unidades manualmente si lo desea.' });
-  });
-};
-
-// 3. Eliminar Equipo Individual (Con protección de alquiler)
-exports.eliminarEquipo = (req, res) => {
-  const { id } = req.params;
-
-  db.get('SELECT estado FROM equipos WHERE id = ?', [id], (err, row) => {
-    if (err) return res.status(500).json({ mensaje: 'Error al verificar equipo' });
-    
-    if (row && row.estado === 'alquilado') {
-      return res.status(400).json({ mensaje: 'No se puede desactivar un equipo que está alquilado.' });
-    }
-
-    db.run('UPDATE equipos SET activo = 0 WHERE id = ?', [id], function(err) {
-      if (err) return res.status(500).json({ mensaje: 'Error al desactivar equipo' });
-      res.json({ mensaje: 'Equipo desactivado correctamente' });
-    });
-  });
-};
-
-// 4. Restaurar Equipo Individual (Sencillo)
-exports.restaurarEquipo = (req, res) => {
-  const { id } = req.params;
-  db.run('UPDATE equipos SET activo = 1 WHERE id = ?', [id], function(err) {
-    if (err) return res.status(500).json({ mensaje: 'Error al restaurar equipo' });
-    res.json({ mensaje: 'Equipo restaurado correctamente' });
-  });
-};
+// 2.

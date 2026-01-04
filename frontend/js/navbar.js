@@ -2,6 +2,10 @@ function cargarNavbar() {
   const usuario = JSON.parse(localStorage.getItem('usuario'));
   const esAdmin = usuario && usuario.rol === 'admin';
 
+  // Eliminamos cualquier navbar previa para evitar duplicados
+  const navbarPrevia = document.querySelector('.navbar');
+  if (navbarPrevia) navbarPrevia.remove();
+
   const navbarHTML = `
     <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
       <div class="container-fluid">
@@ -34,7 +38,9 @@ function cargarNavbar() {
                 <a class="nav-link" href="administracion.html" id="nav-admin">Administración</a>
               </li>
             ` : ''}
-
+            <li class="nav-item">
+              <a class="nav-link" href="combos.html" id="nav-combos">Nuevo Alquiler</a>
+            </li>
             <li class="nav-item">
               <button class="btn btn-danger ms-3" onclick="cerrarSesion()">Cerrar Sesión</button>
             </li>
@@ -44,7 +50,7 @@ function cargarNavbar() {
     </nav>
   `;
 
-  // Insertar navbar al inicio del body
+// Insertar navbar al inicio del body
   document.body.insertAdjacentHTML('afterbegin', navbarHTML);
 
   // Marcar la página activa
@@ -61,16 +67,17 @@ function cargarNavbar() {
     document.getElementById('nav-admin')?.classList.add('active');
   } else if (pagina.includes('gestion')) {
     document.getElementById('nav-gestion')?.classList.add('active');
+  } else if (pagina.includes('combos')) {
+    document.getElementById('nav-combos')?.classList.add('active');
   }
 }
 
-// Función para cerrar sesión
 function cerrarSesion() {
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
   localStorage.removeItem('carritoAlquiler');
+  localStorage.removeItem('configAlquiler');
   window.location.href = '/';
 }
 
-// Cargar navbar cuando la página esté lista
 document.addEventListener('DOMContentLoaded', cargarNavbar);

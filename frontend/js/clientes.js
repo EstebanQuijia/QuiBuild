@@ -2,14 +2,16 @@ const API_URL = '/api/clientes';
 let clienteEditando = null;
 
 // 1. CARGAR Y BUSCAR CLIENTES
-
-
 async function cargarClientes() {
     // 1. Verificar sesión
     if (!localStorage.getItem('token')) {
         window.location.href = '/';
         return;
     }
+
+    // OBTENER DATOS DEL USUARIO PARA VALIDAR ROL
+    const usuarioData = JSON.parse(localStorage.getItem('usuario'));
+    const esAdmin = usuarioData && usuarioData.rol === 'admin';
 
     const busqueda = document.getElementById('inputBusqueda').value;
     const clientesBody = document.getElementById('clientesBody');
@@ -28,15 +30,25 @@ async function cargarClientes() {
 
         clientes.forEach(cliente => {
             const row = document.createElement('tr');
+
+            // Lógica para botones según rol
+            let botonesAccion = `
+                <button class="btn btn-sm btn-primary btn-accion" onclick="editarCliente(${cliente.id})">Editar</button>
+            `;
+
+            // SOLO AÑADIR BOTÓN ELIMINAR SI ES ADMIN
+            if (esAdmin) {
+                botonesAccion += `
+                    <button class="btn btn-sm btn-secondary btn-accion" onclick="eliminarCliente(${cliente.id}, '${cliente.nombre}')">Eliminar</button>
+                `;
+            }
+
             row.innerHTML = `
                 <td>${cliente.nombre}</td>
                 <td>${cliente.cedula}</td>
                 <td>${cliente.telefono || 'N/A'}</td>
                 <td>${cliente.correo || 'N/A'}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary btn-accion" onclick="editarCliente(${cliente.id})">Editar</button>
-                    <button class="btn btn-sm btn-secondary btn-accion" onclick="eliminarCliente(${cliente.id}, '${cliente.nombre}')">Eliminar</button>
-                </td>
+                <td>${botonesAccion}</td>
             `;
             clientesBody.appendChild(row);
         });
@@ -49,8 +61,6 @@ async function cargarClientes() {
 
 
 // 2. CREAR / ACTUALIZAR CLIENTE
-
-
 document.getElementById('formCliente').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -62,7 +72,7 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
     const direccion = document.getElementById('direccion').value;
 
     const datos = { nombre, cedula, telefono, correo, direccion };
-    
+
     const token = localStorage.getItem('token');
     const mensajeDiv = document.getElementById('mensajeCliente');
     mensajeDiv.style.display = 'block';
@@ -85,11 +95,11 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
         });
 
         const data = await res.json();
-        
+
         if (res.ok) {
             mensajeDiv.className = 'mensaje exito';
             mensajeDiv.textContent = data.mensaje;
-            
+
             // Limpiar formulario y recargar lista
             document.getElementById('formCliente').reset();
             cancelarEdicion();
@@ -107,8 +117,6 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
 
 
 // 3. EDITAR Y ELIMINAR
-
-
 async function editarCliente(id) {
     try {
         const res = await fetch(`${API_URL}?busqueda=${id}`);
@@ -133,7 +141,7 @@ async function editarCliente(id) {
         document.getElementById('btnGuardar').textContent = 'Actualizar Cliente';
         document.getElementById('btnCancelar').style.display = 'inline-block';
         window.scrollTo({ top: 0, behavior: 'smooth' }); // Mover arriba
-        
+
     } catch (error) {
         console.error('Error al cargar cliente para edición:', error);
     }
@@ -149,6 +157,13 @@ function cancelarEdicion() {
 }
 
 async function eliminarCliente(id, nombre) {
+    // DOBLE SEGURIDAD: Verificar rol antes de ejecutar función
+    const usuarioData = JSON.parse(localStorage.getItem('usuario'));
+    if (usuarioData.rol !== 'admin') {
+        alert("No tienes permisos para realizar esta acción.");
+        return;
+    }
+
     if (!confirm(`¿Estás seguro de que quieres eliminar al cliente ${nombre}?`)) {
         return;
     }
@@ -172,7 +187,7 @@ async function eliminarCliente(id, nombre) {
             mensajeDiv.className = 'mensaje error';
             mensajeDiv.textContent = data.mensaje || 'Error al eliminar.';
         }
-        
+
         setTimeout(() => mensajeDiv.style.display = 'none', 3000);
 
     } catch (error) {
@@ -181,10 +196,8 @@ async function eliminarCliente(id, nombre) {
     }
 }
 
-
 // Ejecutar al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
-    // Si tienes un botón de cancelar, asegúrate de que llame a esta función
-    document.getElementById('btnCancelar').addEventListener('click', cancelarEdicion); 
+    document.getElementById('btnCancelar').addEventListener('click', cancelarEdicion);
     cargarClientes();
 });

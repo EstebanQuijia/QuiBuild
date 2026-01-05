@@ -12,19 +12,23 @@ exports.obtenerInventario = (req, res) => {
       te.descripcion,
       te.foto,
       COUNT(e.id) as total,
-      SUM(CASE WHEN e.estado = 'disponible' AND (e.activo = 1 OR e.activo IS NULL) THEN 1 ELSE 0 END) as disponibles
+      SUM(CASE WHEN e.estado = 'disponible' AND (e.activo = 1 OR e.activo IS NULL) THEN 1 ELSE 0 END) as disponibles,
+      -- ESTA ES LA LÍNEA CLAVE QUE AGREGAMOS:
+      GROUP_CONCAT(e.id) as unidades_ids
     FROM tipos_equipos te
     LEFT JOIN equipos e ON te.id = e.tipo_equipo_id
     WHERE te.activo = 1 OR te.activo IS NULL
     GROUP BY te.id
     ORDER BY te.nombre
   `;
+
   db.all(query, [], (err, rows) => {
     if (err) {
       console.error('Error al obtener inventario:', err);
       return res.status(500).json({ mensaje: 'Error al obtener inventario' });
     }
 
+    // Enviamos las filas con la nueva columna 'unidades_ids'
     res.json(rows);
   });
 };

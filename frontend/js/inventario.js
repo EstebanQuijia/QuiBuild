@@ -3,7 +3,7 @@ if (!localStorage.getItem('token')) {
   window.location.href = '/';
 }
 
-// 1. OBTENER CONFIGURACIÓN DE COMBO (Si existe)
+// 1. OBTENER CONFIGURACIÓN DE COMBO
 let configAlquiler = JSON.parse(localStorage.getItem('configAlquiler'));
 
 // Función para cerrar sesión
@@ -14,8 +14,9 @@ function cerrarSesion() {
   window.location.href = '/';
 }
 
-// 2. INICIALIZAR INTERFAZ DE COMBO (Barra superior técnica)
+// 2. RENDERIZAR BARRA DE PROGRESO SUPERIOR
 function renderizarBarraProgreso() {
+  configAlquiler = JSON.parse(localStorage.getItem('configAlquiler'));
   if (!configAlquiler) return;
 
   const barraExistente = document.getElementById('barra-progreso-alquiler');
@@ -29,25 +30,28 @@ function renderizarBarraProgreso() {
   barra.style.fontSize = '0.85rem';
 
   const { minimos, seleccionados } = configAlquiler;
+  const rec = seleccionados.receptores || [];
+  const col = seleccionados.colectores || [];
+  const bas = seleccionados.bastones || [];
+  const ext = seleccionados.extras || [];
 
-  const listoReceptores = seleccionados.receptores.length >= minimos.receptores;
-  const listoColectores = seleccionados.colectores.length >= minimos.colectores;
-  const listoBastones = seleccionados.bastones.length >= minimos.bastones;
-  
+  const listoReceptores = rec.length >= minimos.receptores;
+  const listoColectores = col.length >= minimos.colectores;
+  const listoBastones = bas.length >= minimos.bastones;
   const todoListo = listoReceptores && listoColectores && listoBastones;
 
   barra.innerHTML = `
     <div class="container-fluid d-flex justify-content-between align-items-center">
       <div>
         <span class="text-warning fw-bold me-3">${configAlquiler.nombrePlan.toUpperCase()}</span>
-        <span class="me-2">Receptores: ${seleccionados.receptores.length}/${minimos.receptores}</span>
-        <span class="me-2">Colectores: ${seleccionados.colectores.length}/${minimos.colectores}</span>
-        <span class="me-2">Bastones: ${seleccionados.bastones.length}/${minimos.bastones}</span>
-        <span class="text-info">Extras: ${seleccionados.tripodes.length + seleccionados.accesorios.length}</span>
+        <span class="me-3">Receptores: <strong class="${listoReceptores ? 'text-success' : 'text-white'}">${rec.length}/${minimos.receptores}</strong></span>
+        <span class="me-3">Colectores: <strong class="${listoColectores ? 'text-success' : 'text-white'}">${col.length}/${minimos.colectores}</strong></span>
+        <span class="me-3">Bastones: <strong class="${listoBastones ? 'text-success' : 'text-white'}">${bas.length}/${minimos.bastones}</strong></span>
+        ${ext.length > 0 ? `<span class="badge bg-warning text-dark"> +${ext.length} EXTRA(S)</span>` : ''}
       </div>
       <div>
-        <button class="btn btn-outline-light btn-sm me-2" style="font-size: 0.75rem" onclick="cancelarSeleccion()">Cancelar</button>
-        <button class="btn ${todoListo ? 'btn-success' : 'btn-secondary'} btn-sm" 
+        <button class="btn btn-outline-light btn-sm me-2" style="font-size: 0.75rem" onclick="cancelarSeleccion()">CANCELAR</button>
+        <button class="btn ${todoListo ? 'btn-success fw-bold' : 'btn-secondary'} btn-sm" 
                 style="font-size: 0.75rem"
                 ${todoListo ? '' : 'disabled'} 
                 onclick="irAResumen()">
@@ -59,7 +63,7 @@ function renderizarBarraProgreso() {
   document.body.prepend(barra);
 }
 
-// 3. CARGAR INVENTARIO (Estilo original restaurado)
+// 3. CARGAR INVENTARIO CON DESCUENTO Y COLORES
 async function cargarInventario() {
   try {
     renderizarBarraProgreso();
@@ -68,38 +72,60 @@ async function cargarInventario() {
     const data = await res.json();
 
     const grid = document.getElementById('inventarioGrid');
+    if (!grid) return;
     grid.innerHTML = '';
 
-    if (data.length === 0) {
-      grid.innerHTML = '<p class="text-center">No hay equipos registrados en el inventario.</p>';
-      return;
+    let idsSeleccionados = [];
+    if (configAlquiler && configAlquiler.seleccionados) {
+        const s = configAlquiler.seleccionados;
+        idsSeleccionados = [
+            ...(s.receptores || []),
+            ...(s.colectores || []),
+            ...(s.bastones || []),
+            ...(s.otros || []),
+            ...(s.extras || []).map(e => e.id)
+        ];
     }
 
     data.forEach(tipo => {
+      let unidadesEnUso = 0;
+      if (tipo.unidades_ids && idsSeleccionados.length > 0) {
+          const idsDeEstaTarjeta = tipo.unidades_ids.toString().split(',').map(Number);
+          unidadesEnUso = idsDeEstaTarjeta.filter(id => idsSeleccionados.includes(id)).length;
+      }
+      
+      const disponiblesVisual = (tipo.disponibles || 0) - unidadesEnUso;
+
+      // --- ASIGNACIÓN DE COLORES DINÁMICOS ---
+      let colorFondo = "#d4edda"; // Verde por defecto (3 o más)
+      let colorTexto = "#155724";
+
+      if (disponiblesVisual <= 0) {
+        colorFondo = "#f8d7da"; // Rojo (0 unidades)
+        colorTexto = "#721c24";
+      } else if (disponiblesVisual >= 1 && disponiblesVisual <= 2) {
+        colorFondo = "#fff3cd"; // Amarillo (1 o 2 unidades)
+        colorTexto = "#856404";
+      }
+
       const card = document.createElement('div');
       card.className = 'equipo-card';
 
-      let stockClass = 'disponible';
-      if (tipo.disponibles === 0) {
-        stockClass = 'agotado';
-      } else if (tipo.disponibles <= 2) {
-        stockClass = 'pocos';
-      }
-
       card.innerHTML = `
         <div class="equipo-foto">
-          ${tipo.foto ? `<img src="media/equipos/${tipo.foto}" alt="${tipo.nombre}">` : 'Sin foto'}
+          ${tipo.foto ? `<img src="media/equipos/${tipo.foto}" alt="${tipo.nombre}">` : '<span>Sin foto</span>'}
         </div>
         <div class="equipo-info">
           <h3>${tipo.nombre}</h3>
           <p><strong>Tipo:</strong> ${tipo.tipo}</p>
-          <p><strong>Marca:</strong> ${tipo.marca || 'N/A'}</p>
-          <p>${tipo.descripcion || 'Sin descripción'}</p>
-          <span class="stock ${stockClass}">
-            ${tipo.disponibles} de ${tipo.total} disponibles
+          <p class="text-muted small mb-2">${tipo.descripcion || 'Sin descripción'}</p>
+          
+          <span class="stock" style="background-color: ${colorFondo} !important; color: ${colorTexto} !important; padding: 4px 12px; border-radius: 15px; font-weight: bold; display: inline-block; font-size: 0.85rem;">
+            ${disponiblesVisual} de ${tipo.total || 0} disponibles
           </span>
+          
           <br>
-          <button class="btn btn-small" onclick="verUnidades(${tipo.id})">Ver Unidades</button>
+          <button class="btn btn-primary btn-small w-100 mt-3" onclick="verUnidades(${tipo.id})">Ver Unidades</button>
         </div>
       `;
       grid.appendChild(card);
@@ -114,7 +140,7 @@ function verUnidades(tipoId) {
 }
 
 function cancelarSeleccion() {
-  if (confirm('¿Deseas cancelar la selección actual?')) {
+  if (confirm('¿Deseas cancelar la selección y volver a los planes?')) {
     localStorage.removeItem('configAlquiler');
     window.location.href = 'combos.html';
   }

@@ -1,173 +1,149 @@
-// Verificar sesión
+// 1. Verificar sesión
 if (!localStorage.getItem('token')) {
     window.location.href = '/';
 }
 
-// Obtener ID del tipo de equipo desde URL
 const urlParams = new URLSearchParams(window.location.search);
 const tipoId = urlParams.get('id');
 
-// Carrito temporal y Configuración de Combo
-let carrito = JSON.parse(localStorage.getItem('carritoAlquiler')) || [];
-let configAlquiler = JSON.parse(localStorage.getItem('configAlquiler')); // Recuperar plan activo
+// Cargar datos iniciales
+async function inicializarPagina() {
+    await cargarTipoEquipo();
+    await cargarUnidades();
+}
 
-// Cargar información del tipo
 async function cargarTipoEquipo() {
     try {
         const res = await fetch(`/api/tipos-equipos/${tipoId}`);
         const tipo = await res.json();
-
-        document.getElementById('nombreTipo').textContent = tipo.nombre;
-        document.getElementById('tipoEquipo').textContent = tipo.tipo;
+        
+        document.getElementById('nombreTipo').textContent = tipo.nombre || 'Sin nombre';
+        document.getElementById('tipoEquipo').textContent = tipo.tipo || 'N/A';
         document.getElementById('marcaEquipo').textContent = tipo.marca || 'N/A';
         document.getElementById('modeloEquipo').textContent = tipo.modelo || 'N/A';
         document.getElementById('descripcionEquipo').textContent = tipo.descripcion || 'Sin descripción';
         
-        if (tipo.foto) {
-            document.getElementById('fotoTipo').src = `media/equipos/${tipo.foto}`;
+        const fotoImg = document.getElementById('fotoTipo');
+        if (tipo.foto && fotoImg) {
+            fotoImg.src = `media/equipos/${tipo.foto}`;
         }
     } catch (error) {
         console.error('Error al cargar tipo:', error);
     }
 }
 
-// Cargar unidades del tipo
 async function cargarUnidades() {
     try {
         const res = await fetch(`/api/equipos/tipo/${tipoId}`);
         const unidades = await res.json();
-
         const container = document.getElementById('listaUnidades');
         
-        if (unidades.length === 0) {
-            container.innerHTML = '<p class="text-center text-muted">No hay unidades registradas de este tipo.</p>';
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!unidades || unidades.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted">No hay unidades registradas.</p>';
             return;
         }
 
-        container.innerHTML = '';
+        // Recuperar plan con seguridad
+        const configAlquiler = JSON.parse(localStorage.getItem('configAlquiler'));
 
         unidades.forEach(unidad => {
-            const enCarrito = carrito.find(item => item.id === unidad.id);
-            
-            let claseEstado = '';
-            let textoEstado = '';
-            let colorBadge = '';
+            // Lógica de selección ultra-segura
+            let seleccionado = false;
+            if (configAlquiler && configAlquiler.seleccionados) {
+                const s = configAlquiler.seleccionados;
+                // Unificamos todos los IDs seleccionados en una sola lista para comparar
+                const todosIds = [
+                    ...(s.receptores || []),
+                    ...(s.colectores || []),
+                    ...(s.bastones || []),
+                    ...(s.otros || []),
+                    ...(s.extras || []).map(e => e.id)
+                ];
+                seleccionado = todosIds.includes(unidad.id);
+            }
+
+            let colorBadge = 'bg-secondary';
+            let textoEstado = unidad.estado;
             let botonHTML = '';
 
             if (unidad.estado === 'disponible') {
-                claseEstado = 'unidad-disponible';
-                textoEstado = '✅ Disponible';
                 colorBadge = 'bg-success';
-                
-                if (enCarrito) {
-                    botonHTML = `<button class="btn btn-warning" onclick="quitarDelCarrito(${unidad.id})">Quitar del carrito</button>`;
+                textoEstado = '✅ Disponible';
+                if (seleccionado) {
+                    botonHTML = `<button class="btn btn-warning" onclick="quitarDelCarrito(${unidad.id})">Quitar Selección</button>`;
                 } else {
-                    botonHTML = `<button class="btn btn-primary" onclick="agregarAlCarrito(${unidad.id}, '${unidad.numero_serie}', '${unidad.variante || ''}')">Seleccionar para alquilar</button>`;
+                    botonHTML = `<button class="btn btn-primary" onclick="agregarAlCarrito(${unidad.id}, '${unidad.numero_serie}')">Seleccionar</button>`;
                 }
             } else if (unidad.estado === 'alquilado') {
-                claseEstado = 'unidad-alquilada';
-                textoEstado = '🔴 Alquilado';
                 colorBadge = 'bg-danger';
+                textoEstado = '🔴 Alquilado';
                 botonHTML = `<button class="btn btn-secondary" disabled>No disponible</button>`;
-            } else {
-                claseEstado = 'unidad-mantenimiento';
-                textoEstado = '🔧 En mantenimiento';
-                colorBadge = 'bg-warning';
-                botonHTML = `<button class="btn btn-secondary" disabled>En mantenimiento</button>`;
             }
 
             const card = document.createElement('div');
-            card.className = `unidad-card ${claseEstado} mb-3 p-3 border rounded shadow-sm`;
+            card.className = `unidad-card mb-3 p-3 border rounded shadow-sm ${seleccionado ? 'border-primary bg-light' : ''}`;
             card.innerHTML = `
                 <div class="row align-items-center">
-                  <div class="col-md-4">
-                    <h5 class="mb-1">${unidad.numero_serie}</h5>
-                    ${unidad.variante ? `<p class="text-muted mb-0">Variante: ${unidad.variante}</p>` : ''}
-                  </div>
-                  <div class="col-md-4">
-                    <span class="badge ${colorBadge} badge-custom">${textoEstado}</span>
-                    ${unidad.observaciones ? `<p class="text-muted small mt-2 mb-0">${unidad.observaciones}</p>` : ''}
-                  </div>
-                  <div class="col-md-4 text-end">
-                    ${botonHTML}
-                  </div>
-                </div>
-            `;
-
+                    <div class="col-md-4"><h5>${unidad.numero_serie}</h5></div>
+                    <div class="col-md-4"><span class="badge ${colorBadge}">${textoEstado}</span></div>
+                    <div class="col-md-4 text-end">${botonHTML}</div>
+                </div>`;
             container.appendChild(card);
         });
 
-        actualizarCarrito();
     } catch (error) {
-        console.error('Error al cargar unidades:', error);
+        console.error('Error crítico al cargar unidades:', error);
+        document.getElementById('listaUnidades').innerHTML = '<p class="text-danger">Error al cargar las unidades. Revisa la consola.</p>';
     }
 }
 
-// Agregar equipo al carrito (CON LÓGICA DE COMBO)
-function agregarAlCarrito(id, numeroSerie, variante) {
-    // 1. Añadir al carrito estándar
-    carrito.push({ id, numeroSerie, variante });
-    localStorage.setItem('carritoAlquiler', JSON.stringify(carrito));
+function agregarAlCarrito(id, numeroSerie) {
+    let config = JSON.parse(localStorage.getItem('configAlquiler'));
+    if (!config) return;
 
-    // 2. Si hay un combo activo, actualizar sus contadores
-    if (configAlquiler) {
-        const nombreTipo = document.getElementById('nombreTipo').textContent.toLowerCase();
-        
-        if (nombreTipo.includes('receptor') || nombreTipo.includes('gps')) {
-            configAlquiler.seleccionados.receptores.push(id);
-        } else if (nombreTipo.includes('colector') || nombreTipo.includes('celular')) {
-            configAlquiler.seleccionados.colectores.push(id);
-        } else if (nombreTipo.includes('bastón') || nombreTipo.includes('baston')) {
-            configAlquiler.seleccionados.bastones.push(id);
-        } else {
-            configAlquiler.seleccionados.otros.push(id);
-        }
-        
-        localStorage.setItem('configAlquiler', JSON.stringify(configAlquiler));
-    }
+    const nombre = document.getElementById('nombreTipo').textContent.toLowerCase();
+    let cat = "otros";
 
-    cargarUnidades(); // Recargar para actualizar botones
-}
+    if (nombre.includes('receptor') || nombre.includes('gps')) cat = "receptores";
+    else if (nombre.includes('colector') || nombre.includes('celular')) cat = "colectores";
+    else if (nombre.includes('bastón') || nombre.includes('baston')) cat = "bastones";
 
-// Quitar del carrito (CON LÓGICA DE COMBO)
-function quitarDelCarrito(id) {
-    // 1. Quitar del carrito estándar
-    carrito = carrito.filter(item => item.id !== id);
-    localStorage.setItem('carritoAlquiler', JSON.stringify(carrito));
+    // Inicializar arrays si no existen
+    if (!config.seleccionados[cat]) config.seleccionados[cat] = [];
+    if (!config.seleccionados.extras) config.seleccionados.extras = [];
 
-    // 2. Quitar de la configuración del combo
-    if (configAlquiler) {
-        configAlquiler.seleccionados.receptores = configAlquiler.seleccionados.receptores.filter(cid => cid !== id);
-        configAlquiler.seleccionados.colectores = configAlquiler.seleccionados.colectores.filter(cid => cid !== id);
-        configAlquiler.seleccionados.bastones = configAlquiler.seleccionados.bastones.filter(cid => cid !== id);
-        configAlquiler.seleccionados.otros = configAlquiler.seleccionados.otros.filter(cid => cid !== id);
-        
-        localStorage.setItem('configAlquiler', JSON.stringify(configAlquiler));
-    }
-
-    cargarUnidades();
-}
-
-// Actualizar contador del carrito flotante
-function actualizarCarrito() {
-    const carritoFlotante = document.getElementById('carritoFlotante');
-    const cantidadCarrito = document.getElementById('cantidadCarrito');
+    const limite = config.minimos[cat] || 0;
     
-    // Si hay combo, usamos la lógica de la barra superior de inventario.js
-    // Si no, mostramos el carrito flotante tradicional
-    if (carrito.length > 0) {
-        if (carritoFlotante) carritoFlotante.style.display = 'block';
-        if (cantidadCarrito) cantidadCarrito.textContent = carrito.length;
+    if (cat !== "otros" && config.seleccionados[cat].length >= limite) {
+        config.seleccionados.extras.push({ id, numeroSerie, tipoNombre: nombre });
     } else {
-        if (carritoFlotante) carritoFlotante.style.display = 'none';
+        config.seleccionados[cat].push(id);
     }
+
+    localStorage.setItem('configAlquiler', JSON.stringify(config));
+    cargarUnidades();
+    if (typeof renderizarBarraProgreso === 'function') renderizarBarraProgreso();
 }
 
-// Ir a formulario de alquiler
-function irAAlquiler() {
-    window.location.href = 'crear-alquiler.html';
+function quitarDelCarrito(id) {
+    let config = JSON.parse(localStorage.getItem('configAlquiler'));
+    if (!config) return;
+
+    // Limpiar de todas las listas posibles
+    const s = config.seleccionados;
+    s.receptores = (s.receptores || []).filter(i => i !== id);
+    s.colectores = (s.colectores || []).filter(i => i !== id);
+    s.bastones = (s.bastones || []).filter(i => i !== id);
+    s.otros = (s.otros || []).filter(i => i !== id);
+    s.extras = (s.extras || []).filter(i => i.id !== id);
+
+    localStorage.setItem('configAlquiler', JSON.stringify(config));
+    cargarUnidades();
+    if (typeof renderizarBarraProgreso === 'function') renderizarBarraProgreso();
 }
 
-// Cargar al iniciar
-cargarTipoEquipo();
-cargarUnidades();
+// Iniciar proceso
+inicializarPagina();
